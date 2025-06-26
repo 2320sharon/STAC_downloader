@@ -22,13 +22,24 @@ Features:
 - Save RGB (MS) and SWIR bands as GeoTIFFs.
 
 Usage:
-1. Set `DownloadSettings` with:
-   - ROI GeoJSON path
-   - Date range
-   - Cloud cover threshold
-   - Output directory and source ("planetary" or "earth-search")
-2. Call `download_s2_imagery(settings)`
 
+    Provide the script with the following parameters:
+    1. `--roi`: Path to the ROI GeoJSON file.
+    2. `--start-date`: Start date in 'YYYY-MM-DD' format.
+    3. `--end-date`: End date in 'YYYY-MM-DD' format.
+    4. `--cloud-cover`: Maximum cloud cover percentage (default: 50).
+    5. `--output-dir`: Directory to save downloaded imagery (default: 'output').
+
+    python download_STAC_S2_imagery.py --roi examples/rois.geojson --start-date 2022-06-01 --end-date 2022-06-30 --cloud-cover 30 --output-dir output_june_2022 --source earth-search
+
+    Output Structure:
+    output/
+    ├── MS/
+    │   ├── <item_id>_MS.tif
+    └── SWIR/
+        ├── <item_id>_SWIR.tif
+
+        
 Example at bottom of script.
 """
 
