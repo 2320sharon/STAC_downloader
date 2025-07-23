@@ -1,4 +1,5 @@
 import os
+import httpx
 from typing import Iterable, Mapping, Sequence, Tuple, List, Any
 import warnings
 import xarray as xr
@@ -29,6 +30,23 @@ class LandsatConfig:
     max_cloud: float = 90
     bands: Sequence[str] = field(default_factory=list)
     interactive_mode: bool = False
+
+
+def collection_exists(url: str, collection_id: str, timeout=5) -> bool:
+    """
+    Checks if a STAC collection exists at the specified URL.
+
+    Args:
+        url (str): The base URL of the STAC API.
+        collection_id (str): The ID of the collection to check for existence.
+        timeout (int, optional): Timeout in seconds for the HTTP request. Defaults to 5.
+
+    Returns:
+        bool: True if the collection exists (HTTP 200), False otherwise.
+    """
+    url = f"{url}/collections/{collection_id}"
+    resp = httpx.get(url, timeout=timeout)  # or .head(), if the server supports it
+    return resp.status_code == 200
 
 
 # Helper: common routine for searching Landsat STAC (Collection 2)
@@ -73,6 +91,13 @@ def search_landsat_collection(
         )
     # Open the STAC API catalog
     catalog = get_provider_catalog(provider)
+    provider_url = get_provider_url(provider)
+    # validate that the catalog has the collection
+    if not collection_exists(provider_url, collection_id):
+        raise ValueError(
+            f"Collection {collection_id} does not exist in the catalog for this provider {provider}."
+        )
+
     print(f"Searching Landsat {', '.join(map(str, missions))} imagery from {catalog}")
 
     # Build date-time range string
@@ -197,13 +222,12 @@ def choose_assets(catalog, collection_id, requested, is_interactive: bool = True
         return []
 
     if is_interactive:
-        print("Available:", ", ".join(avail))
         if unavail:
+            print("Available:", ", ".join(avail))
             print("Unavailable:", ", ".join(unavail))
-
-        if input("Proceed with available assets? (y/n): ").strip().lower() != "y":
-            print("Cancelled.")
-            return []
+            if input("Proceed with available assets? (y/n): ").strip().lower() != "y":
+                print("Cancelled.")
+                exit()
 
     return avail
 
@@ -214,9 +238,25 @@ def get_provider_catalog(provider: str) -> pystac_client.Client:
     Returns a pystac_client.Client instance for the specified provider.
     """
     if determine_provider(provider) == "pc":
+        url = get_provider_url(provider)
         return pystac_client.Client.open(
-            "https://planetarycomputer.microsoft.com/api/stac/v1",
+            url,
             modifier=planetary_computer.sign_inplace,
+        )
+
+
+def get_provider_url(provider: str) -> str:
+    """
+    Get the STAC API URL for the specified provider.
+    Returns a string representing the STAC API URL.
+    """
+    if determine_provider(provider) == "pc":
+        return "https://planetarycomputer.microsoft.com/api/stac/v1"
+    elif determine_provider(provider) == "earth-search":
+        return "https://earth-search.aws.element84.com/v1"
+    else:
+        raise ValueError(
+            f"Unknown provider '{provider}'. Supported providers are 'pc' and 'earth-search'."
         )
 
 
@@ -405,9 +445,9 @@ def save_bands_to_raster(
         warnings.warn(f"Skipping item {item_id_str} due to RasterioIOError: {e}")
         print(f"Skipping item {item_id_str} due to RasterioIOError: {e}")
     except Exception as e:
-        print(f"Error saving {bands} bands to {raster_path}: {e}")
+        print(f"Error saving to {raster_path}: {e}")
     else:
-        print(f"Saved {bands} bands to {raster_path}")
+        print(f"Saved to {raster_path}")
 
 
 def filter_bands(assets, bands):
@@ -448,7 +488,7 @@ def clean_bands(bands: list = None) -> list:
     return cleaned
 
 
-def default_landsat_bands():
+def default_landsat_bands(collection_id: str = "landsat-c2-l2") -> list:
     """Return a list of the  default Landsat bands.
 
     The default bands are:
@@ -460,7 +500,19 @@ def default_landsat_bands():
     - "qa_pixel" (Quality Assessment Pixel)
 
     """
-    DEFAULT_LANDSAT_BANDS = ["red", "green", "blue", "swir16", "nir08", "qa_pixel"]
+    if collection_id == "landsat-c2-l2":
+        DEFAULT_LANDSAT_BANDS = ["red", "green", "blue", "swir16", "nir08", "qa_pixel"]
+    elif collection_id == "landsat-c2-l1":
+        DEFAULT_LANDSAT_BANDS = [
+            "red",
+            "green",
+            "nir08",
+            "qa_pixel",
+        ]
+    else:
+        raise ValueError(
+            f"Unknown collection_id '{collection_id}'. Supported collections are 'landsat-c2-l2' and 'landsat-c2-l1'."
+        )
     return DEFAULT_LANDSAT_BANDS.copy()
 
 
@@ -687,7 +739,6 @@ def download_landsat_with_config(
         satellite_dir = os.path.join(out_dir, satellite)
         print(f"Saving data for {satellite} to {satellite_dir}")
         os.makedirs(satellite_dir, exist_ok=True)
-        print(f"bands: {data.band.values.tolist()}")
         # Save each time slice to a separate file
         save_bands_to_raster(
             data=data,
@@ -699,19 +750,11 @@ def download_landsat_with_config(
         )
 
 
-# @todo : Right now this controls the cloud cover for the entire tile (aka not the cloud cover with the clipped ROI)
-#       maybe we should make this filter the cloud cover within the ROI
-# @todo easy: remove old todo prints
-
-# Make a script to validate the downloaded from each of these sources works properly
-# It should validate the script works, the files downloaded and they have the bands they are supposed to
-
-
 # Example usage with LandsatConfig
 
 if __name__ == "__main__":
 
-    default_bands = default_landsat_bands()
+    default_bands = default_landsat_bands(collection_id="landsat-c2-l2")
 
     # Example usage with LandsatConfig
     config_basic = LandsatConfig(
