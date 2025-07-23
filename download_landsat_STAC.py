@@ -717,13 +717,15 @@ def download_landsat_with_config(
     # Clip to the ROI geometry
     data = data.rio.clip(gdf.geometry.apply(mapping), gdf.crs)
 
-    cloudy_array = create_landsat_cloud_mask(data, cloud_band="qa_pixel")
-    # add the cloud mask band
-    data = add_cloud_mask_to_data(
-        data=data,
-        cloud_mask=cloudy_array,
-        band_name="cloud_mask",
-    )
+    # if it has a cloud band, create a cloud mask
+    if "qa_pixel" in data.band.values:
+        cloudy_array = create_landsat_cloud_mask(data, cloud_band="qa_pixel")
+        # add the cloud mask band
+        data = add_cloud_mask_to_data(
+            data=data,
+            cloud_mask=cloudy_array,
+            band_name="cloud_mask",
+        )
 
     # here is where we can filter data by the cloud mask
     # @todo create new filtered_data that only contains items with less than MAX_SCENE_CLOUD_COVER%
