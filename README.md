@@ -122,7 +122,7 @@ Note: Downloads may be slow or metered as this is a free endpoint.
 
 ### Example #1
 This example shows how to download data from Landsat 8 and 9 for the landsat collection 2 level 2 (surface reflectance).
-- You can read more about collection landsat-c2-l2 on planetary computer's [website](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l1)
+- You can read more about collection landsat-c2-l2 on planetary computer's [website](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2)
 - Before the download begins you will be shown the number of available images and asked if you want to proceed, enter 'y' to start the download process.
 
 <img width="651" height="121" alt="image" src="https://github.com/user-attachments/assets/f8f8603c-0a59-4fe2-bd01-e73490d91660" />
@@ -159,6 +159,10 @@ if __name__ == "__main__":
 ```
 
 ### Example #2
+This example shows how to download data from Landsat 5 for the landsat collection 2 level 1 .
+- You can read more about collection landsat-c2-l2 on planetary computer's [website](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l1)
+- Note: This data can be used to convert to Top of Atmosphere (ToA) imagery but it is not downloaded in that form
+- Before the download begins you will be shown the number of available images and asked if you want to proceed, enter 'y' to start the download process.
 ```
 if __name__ == "__main__":
 
