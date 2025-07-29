@@ -203,5 +203,11 @@ if __name__ == "__main__":
   - Improve cloud filtering for landsat
   - Add support for more STAC providers
   
+# Current Challenges
+1. Earth Search
+- It seems that S1 and Landsat Collection 2 Level 1 data is not available for free from Earth Search
+2. Sentinel 1 Data
+- S1 data is available for free from Planetary Computer, but when loaded into an xarray with `Stacstac` it lacks the necessary projection info to save the clipped image to raster. To get the Vh band to download successfully I have to do first open the entire band with rasterio, which takes more than a 1 minute to perform, then clip this to the ROI then save to raster. I'd like to find a way to download S1 data without having to wait over a minute for each download to complete.
+
 ## Contribution
 Contributions are welcome! Open an issue or PR for bug fixes, feature requests, or enhancements.
